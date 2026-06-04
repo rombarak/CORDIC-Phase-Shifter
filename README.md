@@ -30,7 +30,7 @@ The RTL is verified against a Python-based Golden Model using a robust, self-che
 ## Simulation Setup
 To run the simulation, ensure all source Verilog files (`.v`) and the generated hex memory files (`.mem`) are located in the same working directory. The RTL is fully synthesizable and simulator-agnostic.
 
-Example execution using Cadence IRUN / Xcelium:
+Example execution using Cadence XRUN / Xcelium:
 `xrun -sv cordic_phase_shifter_tb.v cordic_phase_shifter.v`
 
 ---
