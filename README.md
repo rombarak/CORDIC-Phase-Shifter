@@ -1,35 +1,39 @@
 # CORDIC Phase Rotator Pipeline
 
-## System Purpose & Overview
-[cite_start]This repository contains the RTL design and functional verification environment for a CORDIC (Coordinate Rotation Digital Computer) Phase Shifter[cite: 162, 421]. [cite_start]The CORDIC algorithm is widely used in Digital Signal Processing (DSP) and communication systems to perform complex trigonometric phase rotations using only highly efficient hardware operations: additions, subtractions, and bit-shifts[cite: 164, 422]. 
+## Overview
+This repository contains the RTL design and verification environment for a pipelined CORDIC (Coordinate Rotation Digital Computer) Phase Rotator. The module is written in Verilog and performs high-precision trigonometric phase shifts on Cartesian vectors `(x, y)` using only shift and add/sub operations—eliminating the need for expensive hardware multipliers.
 
-[cite_start]The module receives a Cartesian vector `(x, y)` and a target angle `p`, and iteratively rotates the vector to the new phase while preserving its original amplitude[cite: 165, 434].
+This project demonstrates core micro-architecture design principles, including unrolled pipeline generation, fixed-point mathematical scaling, and automated file-based verification.
 
 ---
 
 ## Micro-Architecture Details
-[cite_start]The design is implemented in Verilog using a fully synchronous, unrolled Pipeline architecture to achieve high data throughput (one valid output per clock cycle)[cite: 162, 275].
+The design achieves a throughput of one valid output per clock cycle after the initial latency, making it highly efficient for continuous digital signal processing.
 
-### Key Hardware Implementations:
-* [cite_start]**Parameterized Pipeline:** The design utilizes Verilog `generate` blocks to physically unroll `n` CORDIC iteration stages (default is 20 stages)[cite: 219, 271, 278]. [cite_start]Data propagates from stage `i` to `i+1` on every rising clock edge[cite: 275].
-* **Arctangent LUT:** A hard-coded Look-Up Table (LUT) stores pre-calculated phase step values (representing $arctan(2^{-i})$). [cite_start]At each pipeline stage, the hardware evaluates the remaining phase error and determines whether to rotate positively or negatively, fetching the corresponding angle correction from the LUT[cite: 166, 277].
-* **Custom Truncation Logic:** To ensure exact parity with software models, a dedicated arithmetic right-shift function (`div_pow2_trunc`) was implemented. [cite_start]This function explicitly handles negative numbers by truncating towards zero rather than applying standard floor rounding[cite: 277].
-* [cite_start]**Gain Compensation:** A mathematical byproduct of the CORDIC rotation is an amplitude gain of approximately ~1.6467[cite: 276, 475]. [cite_start]The final hardware stage normalizes the vector by multiplying it by the inverse factor (~0.6072, represented optimally as the integer `39787` for bit-shifting operations)[cite: 276].
-* [cite_start]**Bit-Width Expansion:** Internal data paths (`x_pipe`, `y_pipe`) are expanded by 2 bits (`XY_WIDTH = 10`) compared to the input width (`8 bits`) to safely accommodate the inherent amplitude growth during intermediate rotation stages without overflow[cite: 272, 474].
+* **Parameterized Pipeline:** Utilizes Verilog `generate` blocks to physically unroll the CORDIC iterations (default: 20 stages). The architecture scales automatically based on the `n` parameter.
+* **Pre-Calculated LUT:** A hard-coded Look-Up Table stores the $arctan(2^{-i})$ phase steps. Each stage dynamically determines the rotation direction (positive or negative) based on the remaining phase error.
+* **Custom Arithmetic Truncation:** To ensure bit-accurate parity with standard software models, a dedicated arithmetic right-shift function (`div_pow2_trunc`) was implemented. It correctly handles negative numbers by truncating towards zero rather than using default floor rounding.
+* **Gain Normalization:** The inherent CORDIC amplitude growth (~1.6467) is neutralized in the final stage. The vector is multiplied by a fixed-point inverse constant and shifted back, ensuring the output magnitude strictly matches the input.
+* **Internal Data Sizing:** The internal data path is expanded by 2 bits (`XY_WIDTH = 10` for an 8-bit input) to safely absorb intermediate amplitude growth without overflow.
 
 ---
 
-## Verification Environment
-[cite_start]A rigorous testbench (`cordic_phase_shifter_tb.v`) was developed to validate the RTL against a Golden Model written in Python[cite: 162, 426].
+## Verification Strategy
+The RTL is verified against a Python-based Golden Model using a robust, self-checking testbench (`cordic_phase_shifter_tb.v`).
 
-* [cite_start]**File-Based I/O:** The verification suite uses the `$readmemh` system task to dynamically load pre-generated test vectors (inputs and expected outputs) from external hex files into the testbench memory arrays[cite: 382, 461].
-* [cite_start]**Throughput & Pipeline Stress-Testing:** The testbench drives continuous, back-to-back input stimulus into the module on every clock cycle, verifying the pipeline's ability to operate under maximum load without data corruption[cite: 385].
-* [cite_start]**Latency Tracking & Automated Checking:** The verification environment explicitly accounts for the hardware latency of 21 clock cycles[cite: 287, 386]. [cite_start]Once the pipeline is full, it performs a strict, cycle-by-cycle exact match comparison (`!==`) between the DUT outputs and the expected Golden Model vectors, ensuring 100% precision[cite: 363, 387].
+* **File-Based Test Vectors:** Input stimuli and expected outputs are pre-generated by the Golden Model and loaded directly into testbench memories using the `$readmemh` system task.
+* **Continuous Throughput Testing:** The testbench injects new vectors back-to-back on every rising clock edge, verifying the pipeline's stability under maximum data load.
+* **Cycle-Accurate Checking:** The environment tracks the exact hardware latency (21 cycles). Once the pipeline is full, it performs a strict `!==` comparison between the DUT outputs and the expected vectors, verifying 100% mathematical precision without any allowed margin of error.
 
 ---
 
 ## Simulation Setup
-Ensure all source Verilog files and the generated `.mem` test vector files are located in the same directory. The code is fully synthesizable and compatible with standard industry simulators.
+To run the simulation, ensure all source Verilog files (`.v`) and the generated hex memory files (`.mem`) are located in the same working directory. The RTL is fully synthesizable and simulator-agnostic.
 
-Example execution using Cadence XRUN/Xcelium:
+Example execution using Cadence IRUN / Xcelium:
 `xrun -sv cordic_phase_shifter_tb.v cordic_phase_shifter.v`
+
+---
+## Author
+**Rom Barak**
+Electrical Engineering Student | RTL Design & Functional Verification
